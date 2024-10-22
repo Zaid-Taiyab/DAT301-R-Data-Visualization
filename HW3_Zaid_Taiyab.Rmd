@@ -1,0 +1,203 @@
+---
+title: "Simple Linear Regression"
+author: "Zaid Taiyab"
+date: "2024-10-17"
+output: ioslides_presentation
+---
+
+<style type="text/css">
+body p, div, h1, h2, h3, h4, h5 {
+  color: black;
+  font-family: "Modern Computer Roman", serif;
+}
+slides > slide.title-slide hgroup h1 {
+  color: #8C1D40; /* the maroon color */
+}
+h2 {
+  color: #8C1D40; /* the maroon color */
+}
+.ioslides .slide {
+  padding-bottom: 100px;
+}
+.ioslides h2, .ioslides h3, .ioslides h4 {
+  font-size: 16px;
+}
+.ioslides p {
+  font-size: 13px;
+}
+pre, code {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+</style> <!-- end of defining font and styles in various parts of slides -->
+
+## Welcome to Simple Linear Regression Presentation
+In this presentation, we will talk about simple linear regression, from defining it, to visualizing it for sample seed data and for the dataset mtcars. 
+
+## Introduction
+
+- **Simple linear regression** is a linear regression model with that estimates a relationship between one independent and one dependent variable. It is a statistical method to model the relationship between two continuous variables and as I mentioned earlier, it assumes a linear relationship between an independent variable \( x \) and a dependent variable \( y \).
+
+## The Linear Regression Model
+
+- The model can be expressed using the formula:
+
+\[
+y = \beta_0 + \beta_1 x + \varepsilon
+\]
+
+Where:
+
+- \( y \) = Dependent variable
+- \( x \) = Independent variable
+- \( \beta_0 \) = Intercept
+- \( \beta_1 \) = Slope
+- \( \varepsilon \) = Error
+
+## Estimating Parameters
+
+- Parameters \( \beta_0 \) and \( \beta_1 \) are estimated using the formula:
+
+\[
+\min_{\beta_0, \beta_1} \sum_{i=1}^n (y_i - \beta_0 - \beta_1 x_i)^2
+\]
+
+## Example Dataset
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(plotly)
+library(tidyr)
+library(dplyr)
+
+# Sample data
+set.seed(123)
+x <- 1:100
+y <- 2 + 3 * x + rnorm(100, mean = 0, sd = 30)
+data <- data.frame(x, y)
+```
+
+## Scatter plot data:
+```{r, echo=FALSE}
+ggplot(data, aes(x = x, y = y)) +
+  geom_point(color = "red") +
+  labs(
+    title = "Scatter Plot of the generated sample data",
+    x = "Independent Variable (x)",
+    y = "Dependent Variable (y)"
+  ) +
+  theme_light()
+```
+
+## Fitting the Linear Model
+```{r, echo=FALSE}
+model <- lm(y ~ x, data = data)
+summary(model)
+```
+
+## What do the numbers and variables say?
+The intercept is the starting point where x=0.
+The slope shows, how much y changes with a one unit increase in x.
+The R squared shows how well our line fits to the data.
+
+## Using mtcars dataset
+```{r, echo=FALSE}
+data(mtcars)
+head(mtcars)
+```
+
+## MPG vs Cars weight 
+```{r, echo=TRUE,fig.height=3, fig.width=5}
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point(color = "blue") +
+  labs(
+    title = "MPG vs. Car Weight",
+    x = "Weight (1000 lbs)",
+    y = "Miles Per Gallon (MPG)"
+  ) +
+  theme_minimal()
+```
+## Fitting Linear regression on them
+```{r, echo=TRUE}
+mtcars_model <- lm(mpg ~ wt, data = mtcars)
+summary(mtcars_model)
+```
+## Linear regression line for mtcars
+```{r, echo=FALSE}
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkgreen") +
+  labs(
+    title = "MPG vs. Car Weight with Regression Line",
+    x = "Weight (1000 lbs)",
+    y = "Miles Per Gallon (MPG)"
+  ) +
+  theme_minimal()
+```
+
+## Actual vs predicted MPG
+```{r, echo=FALSE}
+mtcars$predicted_mpg <- predict(mtcars_model)
+ggplot(mtcars, aes(x = mpg, y = predicted_mpg)) +
+  geom_point(color = "purple", size = 3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey") +
+  labs(
+    title = "Actual vs. Predicted MPG",
+    x = "Actual MPG",
+    y = "Predicted MPG"
+  ) +
+  theme_bw()
+```
+
+## Plotly Plot 2D
+```{r, echo=FALSE}
+library(plotly)
+library(dplyr)
+data(mtcars)
+model <- lm(mpg ~ wt, data = mtcars)
+mtcars <- mtcars %>%
+  mutate(predicted_mpg = predict(model),
+         residuals = mpg - predicted_mpg)
+plot_2d <- plot_ly(
+  data = mtcars, x = ~wt, y = ~mpg, type = 'scatter', mode = 'markers',
+  marker = list(color = 'blue', size = 8)
+) %>%
+  add_lines(
+    x = ~wt, y = ~predicted_mpg, name = 'Regression Line', 
+    line = list(color = 'green')
+  ) %>%
+  layout(
+    title = "2D Scatter Plot: MPG vs. Weight",
+    xaxis = list(title = "Weight (1000 lbs)"),
+    yaxis = list(title = "Miles Per Gallon (MPG)")
+  )
+plot_2d
+```
+
+## Plotly Plot 3D
+```{r, echo=FALSE}
+plot_3d <- plot_ly(
+  mtcars, x = ~wt, y = ~mpg, z = ~residuals, type = "scatter3d", mode = "markers",
+  marker = list(size = 5, color = ~residuals, colorscale = "Viridis", showscale = TRUE)
+) %>%
+  layout(
+    title = "3D Scatter Plot of Residuals",
+    scene = list(
+      xaxis = list(title = "Weight (1000 lbs)"),
+      yaxis = list(title = "Miles Per Gallon (MPG)"),
+      zaxis = list(title = "Residuals")
+    )
+  )
+plot_3d
+```
+## Final plot
+```{r, echo=TRUE,fig.height=4, fig.width=6}
+library(ggplot2); small_plot <- ggplot(mtcars, aes(x = wt, y = mpg)) + geom_point(color = "blue", size = 2) + geom_smooth(method = "lm", se = FALSE, color = "darkgreen") + labs(title = "MPG vs. Weight: Summary Plot", x = "Weight (1000 lbs)", y = "Miles Per Gallon (MPG)") + theme_minimal(base_size = 5); small_plot
+```
+
+## Conclusion
+
+- **Simple Linear Regression** allows us to model the relationship between two continuous variables.
+- In the `mtcars` dataset, **weight** has a significant negative impact on **MPG**.
+  - Heavier cars tend to have lower fuel efficiency.
+- **Regression tools** help in making predictions into data patterns.

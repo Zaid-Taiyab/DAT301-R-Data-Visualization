@@ -1,0 +1,190 @@
+---
+title: "Lab02"
+author: "Zaid Taiyab"
+date: "2024-09-29"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+options(error = recover)  # Enable error recovery
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(ggplot2movies)
+library(tidyr)
+data(movies)
+
+```
+
+# Introduction
+
+In this lab, I will explore data about movies collected from http://imdb.com/.
+
+## 1. What is the range of years of production of the movies?
+```{r}
+oldest <- min(movies$year, na.rm = TRUE)
+newest <- max(movies$year, na.rm = TRUE)
+range <- newest - oldest
+
+print(paste("Oldest year:", oldest))
+print(paste("Newest year:", newest))
+print(paste("Range of years:", range))
+```
+
+## 2. Proportion of Movies with and without Budget, and Top 5 Most Expensive Movies
+```{r}
+total_movies_count <- nrow(movies)
+movies_with_budget <- sum(!is.na(movies$budget))
+movies_without_budget <- sum(is.na(movies$budget))
+proportion_with <- movies_with_budget / total_movies_count
+proportion_without <- movies_without_budget / total_movies_count
+
+print(paste("Total number of movies:", total_movies_count))
+print(paste("Movies with budget:", movies_with_budget))
+print(paste("Movies without budget:", movies_without_budget))
+print(paste("Proportion with budget:", round(proportion_with, 2)))
+print(paste("Proportion without budget:", round(proportion_without, 2)))
+
+top_5_expensive_movies <- movies %>%
+  filter(!is.na(budget)) %>%
+  arrange(desc(budget)) %>%
+  head(5)
+
+print(top_5_expensive_movies[, c("title", "budget")])
+```
+
+## 3. Top 5 Longest Movies
+```{r}
+longestMovies <- movies %>%
+  arrange(desc(length)) %>%
+  head(5)
+print(longestMovies[, c("title", "length")])
+```
+
+## 4. Shortest and Longest Short Movies
+```{r}
+shortestMovies <- movies %>% filter(Short == 1)
+if (nrow(shortestMovies) > 0) {
+  valid_lengths <- shortestMovies %>% filter(!is.na(length))
+  if (nrow(valid_lengths) > 0) {
+    min_length <- min(valid_lengths$length)
+    max_length <- max(valid_lengths$length)
+    shortestMovies <- valid_lengths %>% filter(length == min_length)
+    longestMovies <- valid_lengths %>% filter(length == max_length)
+    print("Shortest short movie:")
+    print(shortestMovies[, c("title", "length")])
+    print("Longest short movie:")
+    print(longestMovies[, c("title", "length")])
+  } else {
+    print("No short movies with valid lengths found.")
+  }
+} else {
+  print("No valid short movies found.")
+}
+
+```
+
+## 5. Number of Movies per Genre (Bar Plot)
+```{r}
+
+genre_counts <- colSums(movies[, c("Action", "Animation", "Comedy", 
+                                   "Drama", "Documentary", "Romance", "Short")], na.rm=TRUE)
+genre_data <- data.frame(genre = names(genre_counts), count = genre_counts)
+ggplot(genre_data, aes(x = genre, y = count)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of Movies per Genre", x = "Genre", y = "Count")
+
+```
+
+## 6. Average Rating per Genre (Bar Plot)
+```{r}
+average_ratings <- movies %>%
+  pivot_longer(cols = Action:Short, names_to = "genre", values_to = "value") %>%
+  
+  filter(value == 1) %>%
+  group_by(genre) %>%
+  summarise(avg_rating = mean(rating, na.rm = TRUE))
+
+ggplot(average_ratings, aes(x = genre, y = avg_rating)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Rating per Genre", x = "Genre", y = "Average Rating")
+
+```
+
+## 7. Average Rating of Movies per Genre (2000-2005)
+```{r}
+moviesBetween00_05 <- movies %>%
+  filter(year >= 2000 & year <= 2005)
+
+average_ratings_2000_2005 <- moviesBetween00_05 %>%
+  pivot_longer(cols = Action:Short, names_to = "genre", values_to = "value") %>%
+  filter(value == 1) %>%
+  group_by(genre) %>%
+  summarise(avg_rating = mean(rating, na.rm = TRUE), .groups = 'drop')
+print(average_ratings_2000_2005)
+
+```
+
+## 8. Movies per Genre by Year (1990 Onwards)
+```{r}
+movies1990 <- movies %>% 
+  filter(year >= 1990) 
+genre_year_counts <- movies1990 %>%
+  pivot_longer(cols = Action:Short, 
+               names_to = "genre", 
+               values_to = "value") %>%
+  filter(value == 1, genre != "Short") %>%
+  group_by(year, genre) %>%
+  summarise(count = n(), .groups = 'drop')
+ggplot(genre_year_counts, aes(x = year, y = count, color = genre)) +
+  geom_line() +
+  labs(title = "Movies per Genre by Year (1990 Onwards)", 
+       x = "Year", 
+       y = "Count") +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+```
+
+## Question 9.1: What is the average and median rating of drama movies?
+
+```{r}
+drama_movies <- movies %>% filter(Drama == 1)
+average_rating <- mean(drama_movies$rating, na.rm = TRUE)
+median_rating <- median(drama_movies$rating, na.rm = TRUE)
+print(paste("Average rating of drama movies:", round(average_rating, 2)))
+print(paste("Median rating of drama movies:", round(median_rating, 2)))
+ggplot(drama_movies, aes(x = rating)) +
+  geom_histogram(binwidth = 0.5, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Ratings for Drama Movies",
+       x = "IMDB Rating",
+       y = "Count")
+```
+
+## Question 9.2: What is the average budget of drama movies?
+
+```{r}
+drama_movies_budget <- drama_movies %>% filter(!is.na(budget))
+average_budget <- mean(drama_movies_budget$budget, na.rm = TRUE)
+print(paste("Average budget of drama movies:", round(average_budget, 2)))
+ggplot(drama_movies_budget, aes(x = budget)) +
+  geom_histogram(binwidth = 1e7, fill = "lightgreen", color = "black") +
+  labs(title = "Distribution of Budgets for Drama Movies",
+       x = "Budget (USD)",
+       y = "Count")
+```
+
+## Question 9.3: Compare ratings of drama movies vs. other genres
+```{r}
+genre_ratings <- movies %>%
+  pivot_longer(cols = c("Action", "Animation", "Comedy", "Drama", "Documentary", "Romance"),
+               names_to = "genre", values_to = "value") %>%
+  filter(value == 1) %>%
+  select(title, genre, rating) %>%
+  filter(!is.na(rating))
+ggplot(genre_ratings, aes(x = genre, y = rating, fill = genre)) +
+  geom_boxplot() +
+  labs(title = "Comparison of Movie Ratings Across Genres",
+       x = "Genre",
+       y = "IMDB Rating") +
+  theme(legend.position = "none")
+```
